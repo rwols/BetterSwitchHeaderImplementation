@@ -4,20 +4,18 @@ import os
 
 
 class bidict(dict):
-    def __init__(self, *args, **kwargs):
-        super(bidict, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(bidict, self).__init__()
         self.inverse = {}
-        for key, value in self.iteritems():
-            self.inverse.setdefault(value,[]).append(key)
 
     def __setitem__(self, key, value):
         if key in self:
             self.inverse[self[key]].remove(key)
         super(bidict, self).__setitem__(key, value)
-        self.inverse.setdefault(value,[]).append(key)
+        self.inverse[value] = key
 
     def __delitem__(self, key):
-        self.inverse.setdefault(self[key],[]).remove(key)
+        self.inverse.setdefault(self[key], "").remove(key)
         if self[key] in self.inverse and not self.inverse[self[key]]:
             del self.inverse[self[key]]
         super(bidict, self).__delitem__(key)
@@ -91,14 +89,11 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
                 continue
             else:
                 for file in files:
-                    if (self.name in file and
-                            not file.endswith(self.ext) and
-                            file.endswith(self.extensions)):
-                        return os.path.join(root, file)
-                    elif file.endswith(".sublime-project"):
-                        # This directory is most likely the root directory,
-                        # do not go any deeper.
+                    name, ext = os.path.splitext(file)
+                    if ext == ".sublime-project":
                         self.deeper = False
+                    elif self.name == name and self.ext != ext and ext[1:] in self.extensions:
+                        return os.path.join(root, file)
                 self.dirs_visited.add(root)
         return None
 
