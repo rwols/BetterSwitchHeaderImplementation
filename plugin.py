@@ -3,7 +3,29 @@ import sublime
 import os
 
 
+class bidict(dict):
+    def __init__(self, *args, **kwargs):
+        super(bidict, self).__init__(*args, **kwargs)
+        self.inverse = {}
+        for key, value in self.iteritems():
+            self.inverse.setdefault(value,[]).append(key)
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.inverse[self[key]].remove(key)
+        super(bidict, self).__setitem__(key, value)
+        self.inverse.setdefault(value,[]).append(key)
+
+    def __delitem__(self, key):
+        self.inverse.setdefault(self[key],[]).remove(key)
+        if self[key] in self.inverse and not self.inverse[self[key]]:
+            del self.inverse[self[key]]
+        super(bidict, self).__delitem__(key)
+
+
 class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
+
+    _cache = bidict()
 
     def run(self, extensions):
 
@@ -12,6 +34,14 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
             return
         fn = view.file_name()
         if not fn:
+            return
+        result = self.__class__._cache.get(fn, None)
+        if result:
+            self.window.run_command("open_file", {"file": result})
+            return
+        result = self.__class__._cache.inverse.get(fn, None)
+        if result:
+            self.window.run_command("open_file", {"file": result})
             return
 
         basedir, self.basename = os.path.split(fn)
@@ -34,6 +64,7 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
             count += 1
         if result:
             self.window.run_command("open_file", {"file": result})
+            self.__class__._cache[fn] = result
         elif count == sanity_limit:
             sublime.error_message("Reached sanity limit (which is {}) for "
                                   "going up parent directories. You can "
