@@ -58,7 +58,8 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
             "BetterSwitchHeaderImplementation.sublime-settings").get(
                 "sanity_limit", 3)
         result = self._find(basedir)
-        while (not result) and (count < sanity_limit):
+        self.deeper = True
+        while (not result) and (count < sanity_limit) and self.deeper:
             basedir = os.path.abspath(os.path.join(basedir, ".."))
             result = self._find(basedir)
             count += 1
@@ -72,9 +73,12 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
                                   "to Preferences -> Package Settings -> "
                                   "BetterSwitchHeaderImplementation -> "
                                   "Settings.".format(sanity_limit))
-        else:
+        elif not self.deeper:
             sublime.error_message("Could not find a header/implementation "
                                   "for {}".format(fn))
+        else:
+            sublime.error_message("Unknown stop condition. "
+                                  "Please submit an issue.")
 
     def _find(self, dir):
         for root, dirs, files in os.walk(dir):
@@ -91,6 +95,10 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
                             not file.endswith(self.ext) and
                             file.endswith(self.extensions)):
                         return os.path.join(root, file)
+                    elif file.endswith(".sublime-project"):
+                        # This directory is most likely the root directory,
+                        # do not go any deeper.
+                        self.deeper = False
                 self.dirs_visited.add(root)
         return None
 
