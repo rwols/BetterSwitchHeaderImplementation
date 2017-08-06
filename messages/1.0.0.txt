@@ -1,0 +1,4 @@
+- First implementation
+- Project mode searching
+- Folder mode searching
+- Caching
