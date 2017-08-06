@@ -1,0 +1,4 @@
+{
+    // The maximal number of parent directories to traverse.
+    "sanity_limit": 3
+}

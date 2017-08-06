@@ -1,0 +1,50 @@
+[
+  {
+    "caption": "Preferences",
+    "id": "preferences",
+    "children":
+    [
+      {
+        "caption": "Package Settings",
+        "id": "package-settings",
+        "children":
+        [
+          {
+            "caption": "BetterSwitchHeaderImplementation",
+            "id": "BetterSwitchHeaderImplementation",
+            "children":
+            [
+              {
+                "command": "open_url",
+                "caption": "README",
+                "mnemonic": "R",
+                "args":
+                {
+                  "url": "https://github.com/rwols/BetterSwitchHeaderImplementation"
+                }
+              },
+              {
+                "command": "open_url",
+                "caption": "Report an Issue",
+                "mnemonic": "R",
+                "args":
+                {
+                  "url": "https://github.com/rwols/BetterSwitchHeaderImplementation/issues"
+                }
+              },
+              {
+                "command": "edit_settings",
+                "caption": "Settings",
+                "mnemonic": "S",
+                "args":
+                {
+                  "base_file": "${packages}/BetterSwitchHeaderImplementation/BetterSwitchHeaderImplementation.sublime-settings"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
