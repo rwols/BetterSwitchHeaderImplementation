@@ -30,40 +30,47 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
         view = self.window.active_view()
         if not view:
             return
-        fn = view.file_name()
-        if not fn:
+        self.fn = view.file_name()
+        if not self.fn:
             return
-        result = self.__class__._cache.get(fn, None)
+        result = self.__class__._cache.get(self.fn, None)
         if result:
             self.window.run_command("open_file", {"file": result})
             return
-        result = self.__class__._cache.inverse.get(fn, None)
+        result = self.__class__._cache.inverse.get(self.fn, None)
         if result:
             self.window.run_command("open_file", {"file": result})
             return
 
-        basedir, self.basename = os.path.split(fn)
+        self.basedir, self.basename = os.path.split(self.fn)
         self.name, self.ext = os.path.splitext(self.basename)
         if self.ext != "" and self.ext[1:] not in extensions:
             return
 
         self.extensions = tuple(extensions)  # so we can use it with .endswith
-        self.dirs_visited = set()            # dont visit dirs twice
 
+        if "project_path" in self.window.extract_variables():
+            # we're in a sublime project.
+            self._project_mode()
+        else:
+            self._folder_mode()
+
+    def _folder_mode(self):
+        self.dirs_visited = set()  # dont visit dirs twice
         # use a sanity limit
         count = 0
         sanity_limit = sublime.load_settings(
             "BetterSwitchHeaderImplementation.sublime-settings").get(
                 "sanity_limit", 3)
-        result = self._find(basedir)
+        result = self._find_folder_mode(self.basedir)
         self.deeper = True
         while (not result) and (count < sanity_limit) and self.deeper:
-            basedir = os.path.abspath(os.path.join(basedir, ".."))
-            result = self._find(basedir)
+            self.basedir = os.path.abspath(os.path.join(self.basedir, ".."))
+            result = self._find_folder_mode(self.basedir)
             count += 1
         if result:
             self.window.run_command("open_file", {"file": result})
-            self.__class__._cache[fn] = result
+            self.__class__._cache[self.fn] = result
         elif count == sanity_limit:
             sublime.error_message("Reached sanity limit (which is {}) for "
                                   "going up parent directories. You can "
@@ -73,12 +80,15 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
                                   "Settings.".format(sanity_limit))
         elif not self.deeper:
             sublime.error_message("Could not find a header/implementation "
-                                  "for {}".format(fn))
+                                  "for {}".format(self.fn))
         else:
             sublime.error_message("Unknown stop condition. "
                                   "Please submit an issue.")
 
-    def _find(self, dir):
+    def _project_mode(self):
+        self._find_project_mode()
+
+    def _find_folder_mode(self, dir):
         for root, dirs, files in os.walk(dir):
             if root.endswith((".git", ".svn", ".hg")):
                 # Skip these directories prematurely (heuristic).
@@ -92,10 +102,43 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
                     name, ext = os.path.splitext(file)
                     if ext == ".sublime-project":
                         self.deeper = False
-                    elif self.name == name and self.ext != ext and ext[1:] in self.extensions:
+                    elif (self.name == name and
+                            self.ext != ext and
+                            ext[1:] in self.extensions):
                         return os.path.join(root, file)
                 self.dirs_visited.add(root)
         return None
+
+    def _find_project_mode(self):
+        self.candidates = []
+        dir = self.window.extract_variables()["project_path"]
+        for root, dirs, files in os.walk(dir):
+            if root.endswith((".git", ".svn", ".hg")):
+                # Skip these directories prematurely (heuristic).
+                continue
+            else:
+                for file in files:
+                    name, ext = os.path.splitext(file)
+                    if (self.name == name and
+                            self.ext != ext and
+                            ext[1:] in self.extensions):
+                        self.candidates.append(os.path.join(root, file))
+        if len(self.candidates) == 0:
+            sublime.error_message("Could not find a header/implementation "
+                                  "for {}".format(self.fn))
+        elif len(self.candidates) == 1:
+            self.window.run_command("open_file", {"file": self.candidates[0]})
+            self.__class__._cache[self.fn] = self.candidates[0]
+        else:  # len(self.candidates) > 1
+            self.window.show_quick_panel(self.candidates,
+                                         self._on_done_select_candidate)
+
+    def _on_done_select_candidate(self, index):
+        if index == -1:
+            return
+        thefile = self.candidates[index]
+        self.window.run_command("open_file", {"file": thefile})
+        self.__class__._cache[self.fn] = thefile
 
 
 class BetterSwitchHeaderImplementationListener(sublime_plugin.EventListener):
