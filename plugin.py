@@ -49,7 +49,11 @@ class BetterSwitchHeaderImplementationCommand(sublime_plugin.WindowCommand):
 
         self.extensions = tuple(extensions)  # so we can use it with .endswith
 
-        if "project_path" in self.window.extract_variables():
+        force_folder_mode = sublime.load_settings(
+            "BetterSwitchHeaderImplementation.sublime-settings").get(
+                "force_folder_mode", False)
+        project_mode = "project_path" in self.window.extract_variables()
+        if project_mode and not force_folder_mode:
             # we're in a sublime project.
             self._project_mode()
         else:
