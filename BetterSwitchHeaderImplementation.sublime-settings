@@ -1,4 +1,8 @@
 {
     // The maximal number of parent directories to traverse.
-    "sanity_limit": 3
+    "sanity_limit": 3,
+
+    // Force folder-mode, even if we've openend the project, e.g. if the
+    // project-file isn't at the root of the project.
+    "force_folder_mode": true,
 }
